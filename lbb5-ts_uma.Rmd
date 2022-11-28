@@ -15,15 +15,16 @@ output:
    df_print: paged
 ---
 
-## SETUP
+# SETUP
 
-```{r, message=FALSE, warning=FALSE}
+```{r, warning=FALSE, message=FALSE, class.output="scroll-100"}
 library(tidyverse)
 library(ggplot2)
 library(forecast)
 library(TTR)
 library(fpp)
 library(xts)
+library(lubridate)
 options(scipen=999)
 ```
 
@@ -42,7 +43,7 @@ Notasi $\text{matematika}$
 Catatan
 : Pada LBB ini untuk _piping_ akan menggunakan _native piping_ `|>` yang tersedia di `R 4.1+` untuk versi selain itu gunakan `%>%`. 
 
-## Dataset {#sec-dataset}
+# Dataset {#sec-dataset}
 
 Dataset yang digunakan adalah data [_Daily Exchange Rates per Euro 1999-2022_](https://www.kaggle.com/datasets/lsind18/euro-exchange-daily-rates-19992020) yang diperoleh dari Kaggle (Data diunduh pada hari Senin, 28 November 2022). Dataset ini berisikan _Exchange Rate_ (Nilai tukar) Euro/EUR (€) terhadap mata uang negara lain setiap harinya sejak tahun 1999. Berikut 6 baris pertama dataset.
 
@@ -59,27 +60,119 @@ exchange |> tail()
 
 Berikut struktur dataset menggunakan `str()`.
 
-```{r}
+```{r, class.output="scroll-100"}
 str(exchange)
 ```
 
 Dari struktur diatas diketahui terdapat kolom/negara yang berupa `character`, yang seharusnya berupa angka/numeric. Oleh karena itu, dataset `exchange` harus diolah kembali sebelum dilakukan pemodelan. Proses tersebut dilanjutkan ke **R1 - Pemrosesan Data**.
 
-## R1 - Pemrosesan Data
+# R1 - Pra-pemrosesan Data
 
-Informasi struktur diatas menandakan banyak sekali yang harus diolah sebelum siap digunakan. Perubahan nama kolom dan tipe kolom merupakan hal yang cukup terlihat jelas dari kilasan dataset `exchange`. 
-
-### Menamai Kolom
+Informasi struktur diatas menandakan banyak sekali yang harus diolah sebelum siap digunakan. Perubahan nama kolom dan tipe kolom merupakan hal yang cukup terlihat jelas dari kilasan dataset `exchange`. Sebelum memulai pra-pemrosesan data semua dataset yang digunakan pada tahap ini disimpan dalam objek `exchange_r1`. 
 
 ```{r}
-exchange$Period.Unit. |> tail()
+exchange_r1 <- exchange
+exchange_r1 |> head()
 ```
 
-## R2 - Eksplorasi Data
+## Menamai Kolom
 
-## R3 - Pemodelan
+Nama kolom di `exchange` bisa berbeda ketika pembacaan dataset menggunakan `read_csv()`, tapi untuk dataset ini digunakan `read.csv()`. Nama kolom disimpan dalam variabel `name_columns`. 
 
-## R4 - Evaluasi
+```{r}
+name_columns <- colnames(exchange_r1)
+name_columns
+```
 
-## Kesimpulan
+Strategi dalam membuat nama baru adalah seluruh nama kolom berhuruf kecil semua dengan pemisahnya menggunakan titik. Jadi karakter seperti `X.` dihilangkan, dan `..` dihapus juga. Proses tersebut dilakukan menggunakan `str_replace()` dan `str_to_lower()`. Nama baru kolom disimpan dalam variabel `newname_columns`. Berikut nama baru kolom.
+
+```{r}
+newname_columns <- name_columns |> 
+  str_replace("^X\\.", "") |> 
+  str_replace("\\.+$", "") |> 
+  str_to_lower()
+newname_columns
+```
+
+Nama baru tersebut diterapkan ke dataset `exchange_r1` dan disimpan dalam objek baru bernama `exchange_r1_newname`.
+
+```{r}
+exchange_r1_newname <- exchange_r1 |> 
+  setNames(newname_columns)
+
+exchange_r1_newname |> head()
+```
+Dan berikut secara sekilas data `exchange_r1_newname`. 
+
+```{r, class.output="scroll-100"}
+exchange_r1_newname |> 
+  glimpse()
+```
+
+Setelah nama kolom sudah dibersihkan, bisa dilanjutkan untuk mengubah tipe data setiap kolomnya. 
+
+## Mengubah Tipe Data Kolom
+
+Melihat informasi sekilas mengenai dataset `exchange_r1_newname`. Terdapat dua jenis data yang berbeda di dataset. Kolom pertama yaitu `period.unit` berupa tanggal dengan format `YYYY-MM-DD`. Sedangkan kolom lainnya, merupakan kolom numerik. 
+
+### Kolom waktu
+
+Kolom yang merupakan waktu yaitu `period.unit`. Berikut sekilas data pada kolom `periode.unit`.
+
+```{r}
+set.seed(41608481)
+exchange_r1_newname$period.unit |> sample(size=10)
+```
+
+Setelah mengetahui format `YYYY-MM-DD`, kolom tersebut bisa dikonversi menggunakan _library_ `lubridate` dengan fungsi `ymd()`. Hasil perubahan tersebut disimpan dalam bentuk objek baru bernama `exchange_r1_date`. Berikut beberapa baris pertamanya.
+
+```{r}
+exchange_r1_date <- exchange_r1_newname |> 
+  mutate(period.unit = ymd(period.unit))
+exchange_r1_date |> head()
+```
+
+Untuk memudahkan membaca, dataset diurutkan berdasarkan tanggal.
+
+```{r}
+exchange_r1_date <- exchange_r1_date |> 
+  arrange(period.unit)
+exchange_r1_date |> head()
+```
+
+Kita lihat _range_ waktu yang digunakan di `exchange_r1_date` dengan `summary()` pada kolom `period.unit`.  
+
+```{r}
+summary(exchange_r1_date$period.unit)
+```
+
+Setelah mengetahui tanggal dimulainya dan berakhirnya dataset. Akan dicek apakah ada tanggal yang tidak terekam di dataset. Digunakan `seq.Date()` untuk membuat _range_ dari 4 Januari 1999 hingga 15 November 2022. 
+
+```{r}
+date_start <- exchange_r1_date$period.unit |> min()
+date_end <- exchange_r1_date$period.unit |> max()
+date_range <- seq.Date(date_start, date_end, by = "day")
+date_log_exist <- date_range %in% exchange_r1_date$period.unit
+any(!date_log_exist)
+```
+
+Ternyata dari koding diatas diketahui bahwa terdapat tanggal yang hilang. Berikut tanggal dimana observasi tidak tersedia. 
+
+```{r}
+date_missing <- date_range[!date_log_exist]
+date_range_wday <- date_range |> wday(label=TRUE, abbr = FALSE) |> summary()
+date_missing_wday <- date_missing |> wday(label=TRUE, abbr = FALSE) |> summary() 
+data.frame(date_range_wday, date_missing_wday) |> 
+  mutate(missing_date_percent = date_missing_wday / date_range_wday * 100)
+```
+
+Diketahui bahwa data pada hari Sabtu dan Minggu tidak direkam sama sekali. 
+
+# R2 - Eksplorasi Data
+
+# R3 - Pemodelan
+
+# R4 - Evaluasi
+
+# Kesimpulan
 
