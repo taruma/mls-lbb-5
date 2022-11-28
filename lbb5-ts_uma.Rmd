@@ -1,0 +1,85 @@
+---
+title: "MLS - LBB4: Spotify"
+author: "Taruma Sakti Megariansyah"
+date: "`r Sys.Date()`"
+output: 
+ html_document: 
+   toc: yes
+   toc_float: yes
+   highlight: zenburn
+   theme: sandstone
+   css: style.css
+   code_folding: hide
+   toc_depth: 5
+   number_sections: yes
+   df_print: paged
+---
+
+## SETUP
+
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(forecast)
+library(TTR)
+library(fpp)
+library(xts)
+options(scipen=999)
+```
+
+```{r}
+R.version
+```
+
+LBB ini mendemonstrasikan pemodelan machine learning untuk data _time series_. 
+
+Github
+: Untuk file `.Rmd` atau `styles.css` bisa melihat github proyek ini di [taruma/mls-lbb-5](https://github.com/taruma/mls-lbb-5).
+
+Notasi $\text{matematika}$
+: Untuk ribuan akan menggunakan pemisah koma ($,$), sedangkan pemisah untuk angka dibelakang koma (desimal/mantissa) menggunakan titik ($.$).
+
+Catatan
+: Pada LBB ini untuk _piping_ akan menggunakan _native piping_ `|>` yang tersedia di `R 4.1+` untuk versi selain itu gunakan `%>%`. 
+
+## Dataset {#sec-dataset}
+
+Dataset yang digunakan adalah data [_Daily Exchange Rates per Euro 1999-2022_](https://www.kaggle.com/datasets/lsind18/euro-exchange-daily-rates-19992020) yang diperoleh dari Kaggle (Data diunduh pada hari Senin, 28 November 2022). Dataset ini berisikan _Exchange Rate_ (Nilai tukar) Euro/EUR (€) terhadap mata uang negara lain setiap harinya sejak tahun 1999. Berikut 6 baris pertama dataset.
+
+```{r}
+exchange <- read.csv("data/euro-daily-hist_1999_2022.csv")
+exchange |> head()
+```
+
+Sebagai catatan, dataset diurutkan dari yang terbaru ke yang terlama. Sehingga, baris pertama merupakan data paling terbaru (2022) meski di halaman dataset dimulai dari 1999. Berikut 6 baris terakhir dataset `exchange`.
+
+```{r}
+exchange |> tail()
+```
+
+Berikut struktur dataset menggunakan `str()`.
+
+```{r}
+str(exchange)
+```
+
+Dari struktur diatas diketahui terdapat kolom/negara yang berupa `character`, yang seharusnya berupa angka/numeric. Oleh karena itu, dataset `exchange` harus diolah kembali sebelum dilakukan pemodelan. Proses tersebut dilanjutkan ke **R1 - Pemrosesan Data**.
+
+## R1 - Pemrosesan Data
+
+Informasi struktur diatas menandakan banyak sekali yang harus diolah sebelum siap digunakan. Perubahan nama kolom dan tipe kolom merupakan hal yang cukup terlihat jelas dari kilasan dataset `exchange`. 
+
+### Menamai Kolom
+
+```{r}
+exchange$Period.Unit. |> tail()
+```
+
+## R2 - Eksplorasi Data
+
+## R3 - Pemodelan
+
+## R4 - Evaluasi
+
+## Kesimpulan
+
