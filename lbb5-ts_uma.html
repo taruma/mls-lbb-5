@@ -13,7 +13,7 @@
 
 <meta name="date" content="2022-11-28" />
 
-<title>MLS - LBB4: Spotify</title>
+<title>MLS - LBB5: Daily Exchange Rates per Euro</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -2943,7 +2943,8 @@ border-radius: 0px;
 
 
 
-<h1 class="title toc-ignore">MLS - LBB4: Spotify</h1>
+<h1 class="title toc-ignore">MLS - LBB5: Daily Exchange Rates per
+Euro</h1>
 <h4 class="author">Taruma Sakti Megariansyah</h4>
 <h4 class="date">2022-11-28</h4>
 
@@ -3260,8 +3261,8 @@ hingga 15 November 2022.</p>
 <p>Ternyata dari koding diatas diketahui bahwa terdapat tanggal yang
 hilang. Berikut tanggal dimana observasi tidak tersedia.</p>
 <div class="sourceCode" id="cb24"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>date_missing <span class="ot">&lt;-</span> date_range[<span class="sc">!</span>date_log_exist]</span>
-<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>date_range <span class="sc">|&gt;</span> <span class="fu">wday</span>(<span class="at">label=</span><span class="cn">TRUE</span>, <span class="at">abbr =</span> <span class="cn">FALSE</span>) <span class="sc">|&gt;</span> <span class="fu">summary</span>() <span class="ot">-&gt;</span> date_range_wday</span>
-<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>date_missing <span class="sc">|&gt;</span> <span class="fu">wday</span>(<span class="at">label=</span><span class="cn">TRUE</span>, <span class="at">abbr =</span> <span class="cn">FALSE</span>) <span class="sc">|&gt;</span> <span class="fu">summary</span>() <span class="ot">-&gt;</span> date_missing_wday</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>date_range_wday <span class="ot">&lt;-</span> date_range <span class="sc">|&gt;</span> <span class="fu">wday</span>(<span class="at">label=</span><span class="cn">TRUE</span>, <span class="at">abbr =</span> <span class="cn">FALSE</span>) <span class="sc">|&gt;</span> <span class="fu">summary</span>()</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>date_missing_wday <span class="ot">&lt;-</span> date_missing <span class="sc">|&gt;</span> <span class="fu">wday</span>(<span class="at">label=</span><span class="cn">TRUE</span>, <span class="at">abbr =</span> <span class="cn">FALSE</span>) <span class="sc">|&gt;</span> <span class="fu">summary</span>() </span>
 <span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a><span class="fu">data.frame</span>(date_range_wday, date_missing_wday) <span class="sc">|&gt;</span> </span>
 <span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">missing_date_percent =</span> date_missing_wday <span class="sc">/</span> date_range_wday <span class="sc">*</span> <span class="dv">100</span>)</span></code></pre></div>
 <div data-pagedtable="false">

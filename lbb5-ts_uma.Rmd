@@ -1,5 +1,5 @@
 ---
-title: "MLS - LBB4: Spotify"
+title: "MLS - LBB5: Daily Exchange Rates per Euro"
 author: "Taruma Sakti Megariansyah"
 date: "`r Sys.Date()`"
 output: 
