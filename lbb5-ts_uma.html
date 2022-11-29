@@ -11,7 +11,7 @@
 
 <meta name="author" content="Taruma Sakti Megariansyah" />
 
-<meta name="date" content="2022-11-28" />
+<meta name="date" content="2022-11-29" />
 
 <title>MLS - LBB5: Daily Exchange Rates per Euro</title>
 
@@ -2946,7 +2946,7 @@ border-radius: 0px;
 <h1 class="title toc-ignore">MLS - LBB5: Daily Exchange Rates per
 Euro</h1>
 <h4 class="author">Taruma Sakti Megariansyah</h4>
-<h4 class="date">2022-11-28</h4>
+<h4 class="date">2022-11-29</h4>
 
 </div>
 
@@ -2960,7 +2960,8 @@ Euro</h1>
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(fpp)</span>
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(xts)</span>
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(lubridate)</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">scipen=</span><span class="dv">999</span>)</span></code></pre></div>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(padr)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">scipen=</span><span class="dv">999</span>)</span></code></pre></div>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>R.version</span></code></pre></div>
 <pre><code>##                _                                
 ## platform       x86_64-w64-mingw32               
@@ -3071,8 +3072,10 @@ halaman dataset dimulai dari 1999. Berikut 6 baris terakhir dataset
 <p>Dari struktur diatas diketahui terdapat kolom/negara yang berupa
 <code>character</code>, yang seharusnya berupa angka/numeric. Oleh
 karena itu, dataset <code>exchange</code> harus diolah kembali sebelum
-dilakukan pemodelan. Proses tersebut dilanjutkan ke <strong>R1 -
-Pemrosesan Data</strong>.</p>
+dilakukan pemodelan. Sebagai catatan, dataset <code>exchange</code>
+memiliki <span class="math inline">\(6,177\)</span> baris/observasi dan
+<span class="math inline">\(41\)</span> kolom/variabel. Proses tersebut
+dilanjutkan ke <strong>R1 - Pemrosesan Data</strong>.</p>
 </div>
 <div id="r1---pra-pemrosesan-data" class="section level1" number="3">
 <h1><span class="header-section-number">3</span> R1 - Pra-pemrosesan
@@ -3212,8 +3215,9 @@ Kolom</h2>
 di dataset. Kolom pertama yaitu <code>period.unit</code> berupa tanggal
 dengan format <code>YYYY-MM-DD</code>. Sedangkan kolom lainnya,
 merupakan kolom numerik.</p>
-<div id="kolom-waktu" class="section level3" number="3.2.1">
-<h3><span class="header-section-number">3.2.1</span> Kolom waktu</h3>
+<div id="kolom-waktu-period.unit" class="section level3" number="3.2.1">
+<h3><span class="header-section-number">3.2.1</span> Kolom Waktu
+(<code>period.unit</code>)</h3>
 <p>Kolom yang merupakan waktu yaitu <code>period.unit</code>. Berikut
 sekilas data pada kolom <code>periode.unit</code>.</p>
 <div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">41608481</span>)</span>
@@ -3271,7 +3275,89 @@ hilang. Berikut tanggal dimana observasi tidak tersedia.</p>
   </script>
 </div>
 <p>Diketahui bahwa data pada hari Sabtu dan Minggu tidak direkam sama
-sekali.</p>
+sekali. Sedangkan terdapat juga di hari lain yang hilang dalam dataset.
+Perlu diingat, hilangnya data ini fokus pada tanggal yang tidak tersedia
+pada dataset original dan bukan kehilangan data pada kolom lainnya.</p>
+<p>Tanggal yang hilang pada <code>exchange_r1_date</code> dilengkapi
+menggunakan fungsi <code>pad()</code>. Berikut prosesnya dan
+pemeriksaannya setelah menggunakan fungsi <code>pad()</code> dan
+disimpan dalam objek baru bernama
+<code>exchange_r1_date_complete</code>.</p>
+<div class="sourceCode" id="cb25"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>exchange_r1_date_complete <span class="ot">&lt;-</span> exchange_r1_date <span class="sc">|&gt;</span> </span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pad</span>(<span class="at">interval =</span> <span class="st">&quot;day&quot;</span>)</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a><span class="fu">all</span>(date_range <span class="sc">%in%</span> exchange_r1_date_complete<span class="sc">$</span>period.unit)</span></code></pre></div>
+<pre><code>## [1] TRUE</code></pre>
+<p>Dari nilai <code>TRUE</code> diatas, menandakan bahwa setiap tanggal
+pada <em>range</em> 4 Januari 1999 hingga 15 November 2022 sudah
+terdapat baris/observasinya di objek
+<code>exchange_r1_date_complete</code>. Dengan kata lain, tidak ada
+tanggal yang hilang dalam objek tersebut. Berikut 8 baris pertama
+dataset.</p>
+<div class="sourceCode" id="cb27"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>exchange_r1_date_complete <span class="sc">|&gt;</span> <span class="fu">head</span>(<span class="dv">8</span>)</span></code></pre></div>
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["period.unit"],"name":[1],"type":["date"],"align":["right"]},{"label":["australian.dollar"],"name":[2],"type":["chr"],"align":["left"]},{"label":["bulgarian.lev"],"name":[3],"type":["chr"],"align":["left"]},{"label":["brazilian.real"],"name":[4],"type":["chr"],"align":["left"]},{"label":["canadian.dollar"],"name":[5],"type":["chr"],"align":["left"]},{"label":["swiss.franc"],"name":[6],"type":["chr"],"align":["left"]},{"label":["chinese.yuan.renminbi"],"name":[7],"type":["chr"],"align":["left"]},{"label":["cypriot.pound"],"name":[8],"type":["chr"],"align":["left"]},{"label":["czech.koruna"],"name":[9],"type":["chr"],"align":["left"]},{"label":["danish.krone"],"name":[10],"type":["chr"],"align":["left"]},{"label":["estonian.kroon"],"name":[11],"type":["chr"],"align":["left"]},{"label":["uk.pound.sterling"],"name":[12],"type":["chr"],"align":["left"]},{"label":["greek.drachma"],"name":[13],"type":["chr"],"align":["left"]},{"label":["hong.kong.dollar"],"name":[14],"type":["chr"],"align":["left"]},{"label":["croatian.kuna"],"name":[15],"type":["chr"],"align":["left"]},{"label":["hungarian.forint"],"name":[16],"type":["chr"],"align":["left"]},{"label":["indonesian.rupiah"],"name":[17],"type":["chr"],"align":["left"]},{"label":["israeli.shekel"],"name":[18],"type":["chr"],"align":["left"]},{"label":["indian.rupee"],"name":[19],"type":["chr"],"align":["left"]},{"label":["iceland.krona"],"name":[20],"type":["dbl"],"align":["right"]},{"label":["japanese.yen"],"name":[21],"type":["chr"],"align":["left"]},{"label":["korean.won"],"name":[22],"type":["chr"],"align":["left"]},{"label":["lithuanian.litas"],"name":[23],"type":["chr"],"align":["left"]},{"label":["latvian.lats"],"name":[24],"type":["chr"],"align":["left"]},{"label":["maltese.lira"],"name":[25],"type":["chr"],"align":["left"]},{"label":["mexican.peso"],"name":[26],"type":["chr"],"align":["left"]},{"label":["malaysian.ringgit"],"name":[27],"type":["chr"],"align":["left"]},{"label":["norwegian.krone"],"name":[28],"type":["chr"],"align":["left"]},{"label":["new.zealand.dollar"],"name":[29],"type":["chr"],"align":["left"]},{"label":["philippine.peso"],"name":[30],"type":["chr"],"align":["left"]},{"label":["polish.zloty"],"name":[31],"type":["chr"],"align":["left"]},{"label":["romanian.leu"],"name":[32],"type":["dbl"],"align":["right"]},{"label":["russian.rouble"],"name":[33],"type":["chr"],"align":["left"]},{"label":["swedish.krona"],"name":[34],"type":["chr"],"align":["left"]},{"label":["singapore.dollar"],"name":[35],"type":["chr"],"align":["left"]},{"label":["slovenian.tolar"],"name":[36],"type":["chr"],"align":["left"]},{"label":["slovak.koruna"],"name":[37],"type":["chr"],"align":["left"]},{"label":["thai.baht"],"name":[38],"type":["chr"],"align":["left"]},{"label":["turkish.lira"],"name":[39],"type":["dbl"],"align":["right"]},{"label":["us.dollar"],"name":[40],"type":["chr"],"align":["left"]},{"label":["south.african.rand"],"name":[41],"type":["chr"],"align":["left"]}],"data":[{"1":"1999-01-04","2":"1.9100","3":"","4":"","5":"1.8004","6":"1.6168","7":"","8":"0.58231","9":"35.107","10":"7.4501","11":"15.6466","12":"0.71110","13":"327.15","14":"9.1332","15":"","16":"251.48","17":"9433.61","18":"","19":"","20":"81.48","21":"133.73","22":"1398.59","23":"4.71700","24":"0.6668","25":"0.4432","26":"11.6446","27":"4.4798","28":"8.8550","29":"2.2229","30":"45.510","31":"4.0712","32":"1.3111","33":"25.2875","34":"9.4696","35":"1.9554","36":"189.0450","37":"42.991","38":"42.6799","39":"0.3723","40":"1.1789","41":"6.9358","_rn_":"1"},{"1":"1999-01-05","2":"1.8944","3":"","4":"","5":"1.7965","6":"1.6123","7":"","8":"0.58230","9":"34.917","10":"7.4495","11":"15.6466","12":"0.71220","13":"324.70","14":"9.1341","15":"","16":"250.80","17":"9314.51","18":"","19":"","20":"81.53","21":"130.96","22":"1373.01","23":"4.71740","24":"0.6657","25":"0.4432","26":"11.5960","27":"4.4805","28":"8.7745","29":"2.2011","30":"44.745","31":"4.0245","32":"1.3168","33":"26.5876","34":"9.4025","35":"1.9655","36":"188.7750","37":"42.848","38":"42.5048","39":"0.3728","40":"1.1790","41":"6.7975","_rn_":"2"},{"1":"1999-01-06","2":"1.8820","3":"","4":"","5":"1.7711","6":"1.6116","7":"","8":"0.58200","9":"34.850","10":"7.4452","11":"15.6466","12":"0.70760","13":"324.72","14":"9.1010","15":"","16":"250.67","17":"9337.68","18":"","19":"","20":"81.54","21":"131.42","22":"1359.54","23":"4.69940","24":"0.6649","25":"0.4420","26":"11.4705","27":"4.4637","28":"8.7335","29":"2.1890","30":"44.872","31":"4.0065","32":"1.3168","33":"27.4315","34":"9.3050","35":"1.9699","36":"188.7000","37":"42.778","38":"42.6949","39":"0.3722","40":"1.1743","41":"6.7307","_rn_":"3"},{"1":"1999-01-07","2":"1.8474","3":"","4":"","5":"1.7602","6":"1.6165","7":"","8":"0.58187","9":"34.886","10":"7.4431","11":"15.6466","12":"0.70585","13":"324.40","14":"9.0131","15":"","16":"250.09","17":"9218.77","18":"","19":"","20":"81.06","21":"129.43","22":"1337.16","23":"4.65480","24":"0.6627","25":"0.4413","26":"11.5511","27":"4.4203","28":"8.6295","29":"2.1531","30":"44.436","31":"4.0165","32":"1.3092","33":"26.9876","34":"9.1800","35":"1.9436","36":"188.8000","37":"42.765","38":"42.1678","39":"0.3701","40":"1.1632","41":"6.8283","_rn_":"4"},{"1":"1999-01-08","2":"1.8406","3":"","4":"","5":"1.7643","6":"1.6138","7":"","8":"0.58187","9":"34.938","10":"7.4433","11":"15.6466","12":"0.70940","13":"324.00","14":"9.0302","15":"","16":"250.15","17":"9321.63","18":"","19":"","20":"80.99","21":"130.09","22":"1366.73","23":"4.66430","24":"0.6654","25":"0.4419","26":"11.4414","27":"4.4295","28":"8.5900","29":"2.1557","30":"44.295","31":"4.0363","32":"1.3143","33":"27.2075","34":"9.1650","35":"1.9537","36":"188.8400","37":"42.560","38":"42.5590","39":"0.3718","40":"1.1659","41":"6.7855","_rn_":"5"},{"1":"1999-01-09","2":"NA","3":"NA","4":"NA","5":"NA","6":"NA","7":"NA","8":"NA","9":"NA","10":"NA","11":"NA","12":"NA","13":"NA","14":"NA","15":"NA","16":"NA","17":"NA","18":"NA","19":"NA","20":"NA","21":"NA","22":"NA","23":"NA","24":"NA","25":"NA","26":"NA","27":"NA","28":"NA","29":"NA","30":"NA","31":"NA","32":"NA","33":"NA","34":"NA","35":"NA","36":"NA","37":"NA","38":"NA","39":"NA","40":"NA","41":"NA","_rn_":"6"},{"1":"1999-01-10","2":"NA","3":"NA","4":"NA","5":"NA","6":"NA","7":"NA","8":"NA","9":"NA","10":"NA","11":"NA","12":"NA","13":"NA","14":"NA","15":"NA","16":"NA","17":"NA","18":"NA","19":"NA","20":"NA","21":"NA","22":"NA","23":"NA","24":"NA","25":"NA","26":"NA","27":"NA","28":"NA","29":"NA","30":"NA","31":"NA","32":"NA","33":"NA","34":"NA","35":"NA","36":"NA","37":"NA","38":"NA","39":"NA","40":"NA","41":"NA","_rn_":"7"},{"1":"1999-01-11","2":"1.8134","3":"","4":"","5":"1.7463","6":"1.6104","7":"","8":"0.58167","9":"35.173","10":"7.4433","11":"15.6466","12":"0.70440","13":"323.40","14":"8.9655","15":"","16":"249.70","17":"9255.61","18":"","19":"","20":"80.55","21":"126.33","22":"1356.70","23":"4.62960","24":"0.6586","25":"0.4405","26":"11.4322","27":"4.3970","28":"8.5585","29":"2.1257","30":"43.565","31":"4.0320","32":"1.2980","33":"27.0148","34":"9.0985","35":"1.9358","36":"188.9655","37":"42.509","38":"41.9568","39":"0.3725","40":"1.1569","41":"6.7910","_rn_":"8"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+  </script>
+</div>
+<p>Untuk sementara <em>padding</em> yang dilakukan diisi dengan nilai
+<code>NA</code>, yang nanti akan diproses lebih lanjut sebelum masuk
+eksplorasi data. Dan berikut informasi mengenai perubahan/penambahan
+baris setelah <em>padding</em>.</p>
+<div class="sourceCode" id="cb28"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">info =</span> <span class="fu">c</span>(<span class="st">&quot;baris/observasi&quot;</span>, <span class="st">&quot;kolom/variabel&quot;</span>),</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">nrow.date.original =</span> exchange_r1 <span class="sc">|&gt;</span> <span class="fu">dim</span>(),</span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">nrow.date.complete =</span> exchange_r1_date_complete <span class="sc">|&gt;</span> <span class="fu">dim</span>()</span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span> <span class="fu">column_to_rownames</span>(<span class="st">&quot;info&quot;</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">diff =</span> nrow.date.complete <span class="sc">-</span> nrow.date.original,</span>
+<span id="cb28-8"><a href="#cb28-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">diff_percent =</span> diff <span class="sc">/</span> nrow.date.complete <span class="sc">*</span> <span class="dv">100</span></span>
+<span id="cb28-9"><a href="#cb28-9" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div>
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["nrow.date.original"],"name":[1],"type":["int"],"align":["right"]},{"label":["nrow.date.complete"],"name":[2],"type":["int"],"align":["right"]},{"label":["diff"],"name":[3],"type":["int"],"align":["right"]},{"label":["diff_percent"],"name":[4],"type":["dbl"],"align":["right"]}],"data":[{"1":"6177","2":"8717","3":"2540","4":"29.13847","_rn_":"baris/observasi"},{"1":"41","2":"41","3":"0","4":"0.00000","_rn_":"kolom/variabel"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+  </script>
+</div>
+</div>
+<div id="kolom-numerik" class="section level3" number="3.2.2">
+<h3><span class="header-section-number">3.2.2</span> Kolom Numerik</h3>
+<p>Selain kolom <code>period.unit</code>, kolom lainnya merupakan kolom
+numerik. Akan tetapi pada saat pembacaan <code>read.csv()</code> terjadi
+<em>coercing</em> sehingga kolom tersebut berubah menjadi tipe data
+<code>character</code>. Sebelum memaksakan kolom tersebut menjadi
+numerik, diinginkan untuk mengidentifikasi apa yang terjadi dengan
+dataset tersebut sehingga membuat kolom tersebut menjadi
+<code>character</code>.</p>
+<p>Berikut jumlah jenis kolom masing-masing dari dataset
+<code>exchange_r1_date_complete</code>.</p>
+<div class="sourceCode" id="cb29"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>exchange_r1_date_complete <span class="sc">|&gt;</span> </span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sapply</span>(class) <span class="sc">|&gt;</span> <span class="fu">table</span>()</span></code></pre></div>
+<pre><code>## 
+## character      Date   numeric 
+##        37         1         3</code></pre>
+<div class="sourceCode" id="cb31"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="co"># |&gt; as.data.frame() |&gt; set_names(&quot;column.type&quot;)</span></span></code></pre></div>
+<p>Diketahui ada <span class="math inline">\(37\)</span> kolom yang
+bertipe <code>character</code> dan hanya <span class="math inline">\(3\)</span> yang numeric. Berikut informasi lengkap
+setiap kolomnya.</p>
+<div class="sourceCode" id="cb32"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>column_type_exchange <span class="ot">&lt;-</span> exchange_r1_date_complete <span class="sc">|&gt;</span> </span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sapply</span>(class) <span class="sc">|&gt;</span> <span class="fu">as.data.frame</span>() <span class="sc">|&gt;</span> <span class="fu">set_names</span>(<span class="st">&quot;column.type&quot;</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(column.type)</span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>column_type_exchange</span></code></pre></div>
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["column.type"],"name":[1],"type":["chr"],"align":["left"]}],"data":[{"1":"character","_rn_":"australian.dollar"},{"1":"character","_rn_":"bulgarian.lev"},{"1":"character","_rn_":"brazilian.real"},{"1":"character","_rn_":"canadian.dollar"},{"1":"character","_rn_":"swiss.franc"},{"1":"character","_rn_":"chinese.yuan.renminbi"},{"1":"character","_rn_":"cypriot.pound"},{"1":"character","_rn_":"czech.koruna"},{"1":"character","_rn_":"danish.krone"},{"1":"character","_rn_":"estonian.kroon"},{"1":"character","_rn_":"uk.pound.sterling"},{"1":"character","_rn_":"greek.drachma"},{"1":"character","_rn_":"hong.kong.dollar"},{"1":"character","_rn_":"croatian.kuna"},{"1":"character","_rn_":"hungarian.forint"},{"1":"character","_rn_":"indonesian.rupiah"},{"1":"character","_rn_":"israeli.shekel"},{"1":"character","_rn_":"indian.rupee"},{"1":"character","_rn_":"japanese.yen"},{"1":"character","_rn_":"korean.won"},{"1":"character","_rn_":"lithuanian.litas"},{"1":"character","_rn_":"latvian.lats"},{"1":"character","_rn_":"maltese.lira"},{"1":"character","_rn_":"mexican.peso"},{"1":"character","_rn_":"malaysian.ringgit"},{"1":"character","_rn_":"norwegian.krone"},{"1":"character","_rn_":"new.zealand.dollar"},{"1":"character","_rn_":"philippine.peso"},{"1":"character","_rn_":"polish.zloty"},{"1":"character","_rn_":"russian.rouble"},{"1":"character","_rn_":"swedish.krona"},{"1":"character","_rn_":"singapore.dollar"},{"1":"character","_rn_":"slovenian.tolar"},{"1":"character","_rn_":"slovak.koruna"},{"1":"character","_rn_":"thai.baht"},{"1":"character","_rn_":"us.dollar"},{"1":"character","_rn_":"south.african.rand"},{"1":"Date","_rn_":"period.unit"},{"1":"numeric","_rn_":"iceland.krona"},{"1":"numeric","_rn_":"romanian.leu"},{"1":"numeric","_rn_":"turkish.lira"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+  </script>
+</div>
+<p>Berikut kolom yang berupa numerik dan date.</p>
+<div class="sourceCode" id="cb33"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>column_type_exchange <span class="sc">|&gt;</span> </span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(column.type <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;Date&quot;</span>, <span class="st">&quot;numeric&quot;</span>))</span></code></pre></div>
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["column.type"],"name":[1],"type":["chr"],"align":["left"]}],"data":[{"1":"Date","_rn_":"period.unit"},{"1":"numeric","_rn_":"iceland.krona"},{"1":"numeric","_rn_":"romanian.leu"},{"1":"numeric","_rn_":"turkish.lira"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+  </script>
+</div>
+<p>Jadi untuk <code>iceland.krona</code>, <code>romanian.leu</code>, dan
+<code>turkish.lira</code> sudah berupa numerik.</p>
 </div>
 </div>
 </div>

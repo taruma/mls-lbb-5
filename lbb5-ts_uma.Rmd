@@ -25,6 +25,7 @@ library(TTR)
 library(fpp)
 library(xts)
 library(lubridate)
+library(padr)
 options(scipen=999)
 ```
 
@@ -64,7 +65,7 @@ Berikut struktur dataset menggunakan `str()`.
 str(exchange)
 ```
 
-Dari struktur diatas diketahui terdapat kolom/negara yang berupa `character`, yang seharusnya berupa angka/numeric. Oleh karena itu, dataset `exchange` harus diolah kembali sebelum dilakukan pemodelan. Proses tersebut dilanjutkan ke **R1 - Pemrosesan Data**.
+Dari struktur diatas diketahui terdapat kolom/negara yang berupa `character`, yang seharusnya berupa angka/numeric. Oleh karena itu, dataset `exchange` harus diolah kembali sebelum dilakukan pemodelan. Sebagai catatan, dataset `exchange` memiliki $6,177$ baris/observasi dan $41$ kolom/variabel. Proses tersebut dilanjutkan ke **R1 - Pemrosesan Data**.
 
 # R1 - Pra-pemrosesan Data
 
@@ -115,7 +116,7 @@ Setelah nama kolom sudah dibersihkan, bisa dilanjutkan untuk mengubah tipe data 
 
 Melihat informasi sekilas mengenai dataset `exchange_r1_newname`. Terdapat dua jenis data yang berbeda di dataset. Kolom pertama yaitu `period.unit` berupa tanggal dengan format `YYYY-MM-DD`. Sedangkan kolom lainnya, merupakan kolom numerik. 
 
-### Kolom waktu
+### Kolom Waktu (`period.unit`)
 
 Kolom yang merupakan waktu yaitu `period.unit`. Berikut sekilas data pada kolom `periode.unit`.
 
@@ -166,7 +167,83 @@ data.frame(date_range_wday, date_missing_wday) |>
   mutate(missing_date_percent = date_missing_wday / date_range_wday * 100)
 ```
 
-Diketahui bahwa data pada hari Sabtu dan Minggu tidak direkam sama sekali. 
+Diketahui bahwa data pada hari Sabtu dan Minggu tidak direkam sama sekali. Sedangkan terdapat juga di hari lain yang hilang dalam dataset. Perlu diingat, hilangnya data ini fokus pada tanggal yang tidak tersedia pada dataset original dan bukan kehilangan data pada kolom lainnya. 
+
+Tanggal yang hilang pada `exchange_r1_date` dilengkapi menggunakan fungsi `pad()`. Berikut prosesnya dan pemeriksaannya setelah menggunakan fungsi `pad()` dan disimpan dalam objek baru bernama `exchange_r1_date_complete`.
+
+```{r}
+exchange_r1_date_complete <- exchange_r1_date |> 
+  pad(interval = "day")
+
+all(date_range %in% exchange_r1_date_complete$period.unit)
+```
+
+Dari nilai `TRUE` diatas, menandakan bahwa setiap tanggal pada _range_ 4 Januari 1999 hingga 15 November 2022 sudah terdapat baris/observasinya di objek `exchange_r1_date_complete`. Dengan kata lain, tidak ada tanggal yang hilang dalam objek tersebut. Berikut 8 baris pertama dataset.
+
+```{r}
+exchange_r1_date_complete |> head(8)
+```
+
+Untuk sementara _padding_ yang dilakukan diisi dengan nilai `NA`, yang nanti akan diproses lebih lanjut sebelum masuk eksplorasi data. Dan berikut informasi mengenai perubahan/penambahan baris setelah _padding_.
+
+```{r}
+data.frame(
+  info = c("baris/observasi", "kolom/variabel"),
+  nrow.date.original = exchange_r1 |> dim(),
+  nrow.date.complete = exchange_r1_date_complete |> dim()
+) |> column_to_rownames("info") |> 
+  mutate(
+    diff = nrow.date.complete - nrow.date.original,
+    diff_percent = diff / nrow.date.complete * 100
+  )
+```
+
+### Kolom Numerik
+
+Selain kolom `period.unit`, kolom lainnya merupakan kolom numerik. Akan tetapi pada saat pembacaan `read.csv()` terjadi _coercing_ sehingga kolom tersebut berubah menjadi tipe data `character`. Sebelum memaksakan kolom tersebut menjadi numerik, diinginkan untuk mengidentifikasi apa yang terjadi dengan dataset tersebut sehingga membuat kolom tersebut menjadi `character`. 
+
+Berikut jumlah jenis kolom masing-masing dari dataset `exchange_r1_date_complete`. 
+
+```{r}
+exchange_r1_date_complete |> 
+  sapply(class) |> table()
+```
+
+Diketahui ada $37$ kolom yang bertipe `character` dan hanya $3$ yang numeric. Berikut informasi mengenai tipe setiap kolomnya. 
+
+```{r}
+column_type_exchange <- exchange_r1_date_complete |> 
+  sapply(class) |> as.data.frame() |> set_names("column.type") |> 
+  arrange(column.type)
+column_type_exchange
+```
+
+Berikut kolom yang berupa numerik dan tanggal.
+
+```{r}
+column_type_exchange |> 
+  filter(column.type %in% c("Date", "numeric"))
+```
+
+Jadi untuk `iceland.krona`, `romanian.leu`, dan `turkish.lira` sudah berupa numerik. 
+
+#### Investigasi _coercion_
+
+Pada bagian ini, diinginkan untuk memperoleh informasi kenapa terjadinya _coercion_ sehingga mengubah kolom tersebut menjadi tipe `character`. Untuk evaluasi tersebut akan menggunakan objek `exchange_r1_coercion` yang merupakan `exchange_r1_date_complete` dengan nama baris `period.unit`.
+
+```{r}
+exchange_r1_coercion <- exchange_r1_date_complete |>
+  column_to_rownames("period.unit")
+  
+exchange_r1_coercion |> head()
+```
+
+```{r}
+exchange_r1_coercion |> 
+  mutate_all(as.numeric)
+```
+
+
 
 # R2 - Eksplorasi Data
 
