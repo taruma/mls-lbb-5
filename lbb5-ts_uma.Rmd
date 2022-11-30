@@ -238,10 +238,86 @@ exchange_r1_coercion <- exchange_r1_date_complete |>
 exchange_r1_coercion |> head()
 ```
 
+Berikut daftar karakter yang bukan merupakan angka di dataset `exchange_r1_coercion`.  
+
+```{r}
+list_of_character <- exchange_r1_coercion |>
+  select_if(is_character) |> 
+  lapply(
+    function (.) {
+      is_digits <- str_detect(., "[:digit:]")
+      is_na <- is.na(.)
+      not_digits <- !(is_digits | is_na)
+      row_not_digits <- .[not_digits]
+      row_unique <- row_not_digits |> unique()
+    }
+  )
+
+list_of_character |> unlist() |> unique()
+```
+Dari informasi diatas, karakter `"-"` merupakan penyebab kenapa kolom tersebut diubah menjadi `character`. karakter `""` (karakter kosong) muncul dikarenakan terdapat karakter dikolom tersebut dan terjadi _coercion_ sehingga memaksakan nilai yang kosong menjadi `""` (`character`)). Berikut dikolom mana saja karakter tersebut muncul.
+
+```{r}
+list_of_character |> 
+  lapply(\(.) {paste("[", ., "]", sep = "", collapse = ",")}) |> 
+  as.data.frame() |> t() |> as.data.frame() |> setNames("not.digit")
+```
+
+Dari informasi diatas, bisa diketahui juga bahwa kolom yang tidak memiliki `[]` (`$not.digit` hanya memiliki nilai `[-]`) diartikan tidak memiliki data yang kosong saat pembacaan. Untuk menghitung tepat jumlah baris yang diisi dengan `"-"`, elemen yang `""` akan dibuat `NA`.
+
+```{r}
+exchange_r1_coercion[exchange_r1_coercion == ""] <- NA
+exchange_r1_coercion |> head()
+```
+
+Dengan kode diatas maka nilai yang `""` akan diubah menjadi `NA`, sehingga karakter yang diidentifikasi penyebab _coercion_ itu adalah `"-"`. Selanjutnya ingin mengidentifikasi tanggal mana saja yang terjadi tidak ada data (menggunakan indikator `"-"`).
+
+```{r}
+
+func_logi_dash <- function(.) {
+  is_dash <- (. == "-")
+  logi_dash <- is_dash |> 
+    apply(1, any, na.rm = TRUE)
+}
+
+logi_dash <- exchange_r1_coercion |> func_logi_dash()
+exchange_r1_coercion |> filter(logi_dash)
+```
+
+Dari informasi diatas, terdapat $63$ baris yang memiliki nilai `"-"` (tidak ada). Berikut hari dimana data tersebut tidak tersedia.
+
+```{r}
+exchange_r1_coercion |> filter(logi_dash) |> 
+  rownames() |> wday(label = TRUE, abbr = FALSE) |> table()
+```
+
+Perlu diingat bahwa hari Sabtu dan Minggu, memang tidak direkam dan tersedia di dataset original sama sekali, sehingga tidak muncul sama sekali di dataset. Langkah berikutnya adalah mengubah nilai `"-"` menjadi `NA`. Berikut hasil perubahannya di objek `exchange_r1_coercion`. 
+
+```{r}
+exchange_r1_coercion[exchange_r1_coercion == "-"] <- NA
+exchange_r1_coercion |> subset(logi_dash)
+```
+
+Untuk memastikan tidak ada karakter yang bukan angka, diperiksa kembali objek `exchange_r1_coercion`. Berikut hasil pemeriksaannya.
+
 ```{r}
 exchange_r1_coercion |> 
-  mutate_all(as.numeric)
+  lapply(str_detect, pattern = "[:digit:]") |> 
+  lapply(all, na.rm = TRUE) |> 
+  unlist() |> all()
 ```
+
+Dari hasil diatas, sudah dipastikan bahwa pada `exchange_r1_coercion` seluruh isiannya merupakan angka. Oleh karena itu, semua kolom karakter tersebut bisa diubah menjadi numeric dengan fungsi `as.numeric()`. Hasil perubahan tersebut disimpan dalam objek baru bernama `exchange_r1_numeric`. 
+
+```{r, class.output="scroll-100"}
+exchange_r1_numeric <- exchange_r1_coercion |> 
+  mutate_if(is_character, as.numeric)
+exchange_r1_numeric |> str()
+```
+
+Proses berikutnya adalah mengevaluasi data yang hilang (`NA`). 
+
+### Mengisi data yang hilang
 
 
 
@@ -253,3 +329,9 @@ exchange_r1_coercion |>
 
 # Kesimpulan
 
+## Saran
+
+Berikut saran yang bisa diberikan:
+
+- Pada tahapan mengubah tipe data kolom, bisa dievaluasi setiap kolomnya atau kolom tertentu (tergantung kebutuhan bisnisnya). Sehinggga fokus eksplorasi data sudah ditentukan sejak awal yaitu sebelum masuk ke pra-pemrosesan data. 
+- Di investigasi akhir _coercion_, dinyatakan bahwa "seluruh isiannya merupakan angka". Hal tersebut bisa keliru jika terdapat isian yang merupakan angka tapi tidak _valid_. Semisal, nilai "1.23121312.3" akan dideteksi `TRUE` karena memiliki komponen `:digit:`, meski jika dilakukan `as.numeric()` akan muncul peringatan dan menghasilkan nilai `NA`. Hal tersebut dikarenakan penggunaan `str_detect()` dengan `pattern = "[:digit:]"`. 
