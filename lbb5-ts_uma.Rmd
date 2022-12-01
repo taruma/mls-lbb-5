@@ -20,6 +20,8 @@ output:
 ```{r, warning=FALSE, message=FALSE, class.output="scroll-100"}
 library(tidyverse)
 library(ggplot2)
+library(forcats)
+library(caret)
 library(forecast)
 library(TTR)
 library(fpp)
@@ -116,7 +118,7 @@ Setelah nama kolom sudah dibersihkan, bisa dilanjutkan untuk mengubah tipe data 
 
 Melihat informasi sekilas mengenai dataset `exchange_r1_newname`. Terdapat dua jenis data yang berbeda di dataset. Kolom pertama yaitu `period.unit` berupa tanggal dengan format `YYYY-MM-DD`. Sedangkan kolom lainnya, merupakan kolom numerik. 
 
-### Kolom Waktu (`period.unit`)
+### Kolom Waktu
 
 Kolom yang merupakan waktu yaitu `period.unit`. Berikut sekilas data pada kolom `periode.unit`.
 
@@ -197,6 +199,13 @@ data.frame(
     diff_percent = diff / nrow.date.complete * 100
   )
 ```
+
+Dari informasi diatas diketahui bahwa banyaknya baris yang ditambahkan menggunakan _padding_ sebanyak $2,540$ baris atau sekitar $29\%$ dari total baris lengkapnya data. Untuk catatan banyaknya baris tersebut disimpan dalam variabel `total_padding`.
+
+```{r}
+total_padding <- nrow(exchange_r1_date_complete) - nrow(exchange_r1)
+```
+
 
 ### Kolom Numerik
 
@@ -317,11 +326,103 @@ exchange_r1_numeric |> str()
 
 Proses berikutnya adalah mengevaluasi data yang hilang (`NA`). 
 
-### Mengisi data yang hilang
+### Data yang hilang
+
+Sebelum mengisi data yang hilang, sebaiknya di eksplorasi terlebih dahulu mengenai informasi hilangnya data. Dataset yang digunakan adalah objek `exchange_r1_numeric` yang telah mengubah seluruh tipe kolom menjadi numerik. 
+
+#### Eksplorasi data yang hilang 
+
+```{r}
+missing_val <- exchange_r1_numeric |> is.na() |> colSums()
+missing_val |> as.data.frame() |> 
+  mutate(missing_percentage = missing_val / nrow(exchange_r1_numeric) * 100) |> 
+  arrange(missing_percentage |> desc())
+```
+
+Dari informasi diatas nilai `NA` yang dibangkitkan dari _padding_ terhitung juga. Karena jumlah _padding_ yang dilakukan sudah diketahui pada tahap sebelumnya yaitu sebanyak $2,540$ baris (disimpan dalam variabel `total_padding`). Maka baris yang hilang dikurangi jumalh tersebut untuk memastikan banyaknya data yang hilang ketika tidak dilakukan _padding_ atau hilangnya data aktualnya. 
+
+```{r}
+missing_val_actual <- missing_val |> as.data.frame() |> 
+  mutate(
+    missing_val_actual = missing_val - total_padding,
+    percentage_missing_actual = missing_val_actual / (nrow(exchange_r1_numeric) - total_padding) * 100
+  ) |> 
+  arrange(percentage_missing_actual |> desc())
+missing_val_actual
+```
+
+Berikut visualisasinya agar memudahkan melihat perbandingannya.
+
+```{r, fig.align='center', fig.height=6, fig.cap="Banyaknya Baris yang Hilang (Aktual)"}
+missing_val_actual |> 
+  rownames_to_column("currency") |> 
+  ggplot(aes(x = fct_reorder(currency, missing_val_actual), y = missing_val_actual)) +
+  geom_col(aes(fill = percentage_missing_actual)) +
+  scale_fill_gradient(low = "green", high = "black") +
+  theme_bw() +
+  labs(
+    title = "Hilangnya Data (Aktual)",
+    x = "Mata Uang",
+    y = "Jumlah Baris yang Hilang",
+    fill = "Persen Hilang"
+  ) +
+  coord_flip()
+```
+
+Dari informasi diatas diambil kesimpulan untuk mengambil beberapa kolom saja yang memiliki kelengkapan data yang lebih baik. Dari eksplorasi diatas, diambil keputusan untuk mengambil kolom yang memiliki data yang hilang aktual kurang dari $100$. Kolom terpilih disimpan dalam variabel `selected_country`.
+
+```{r}
+selected_country <- missing_val_actual |> 
+  filter(missing_val_actual <= 100) |> 
+  rownames()
+selected_country
+```
+
+Kolom-kolom yang terpilih disimpan dalam bentuk objek baru bernama `exchange_r1_selected`. Berikut kilasan dataset. 
+
+```{r, class.output="scroll-100"}
+exchange_r1_selected <- exchange_r1_numeric |> 
+  select(all_of(selected_country))
+exchange_r1_selected |> glimpse()
+```
+
+Dari dataset tersebut bisa dilanjutkan ke pengisian data yang hilang. 
+
+#### Pengisian data yang hilang
+
+
+```{r}
+exchange_r1_missing <- exchange_r1_selected |> 
+  filter(exchange_r1_selected |> is.na() |> apply(1, all)) |> 
+  rownames_to_column("period.unit") |> 
+  mutate(
+    period.unit = ymd(period.unit)
+  )
+exchange_r1_missing
+```
+
+
+
 
 
 
 # R2 - Eksplorasi Data
+
+```{r, eval=FALSE}
+exchange_r1_selected |> 
+  # boxplot()
+  mutate_if(is.numeric, function(.) {
+    minvec <- min(., na.rm = TRUE)
+    maxvec <- max(., na.rm = TRUE)
+    normalize <- (. - minvec) / (maxvec - minvec)
+  }) |> 
+  rownames_to_column("period.unit") |>
+  mutate(period.unit = ymd(period.unit)) |>
+  pivot_longer(cols = all_of(selected_country), names_to = "currency", values_to = "rate") |>
+  arrange(currency) |>
+  ggplot(aes(x = period.unit, y = rate, color = currency)) +
+  geom_line()
+```
 
 # R3 - Pemodelan
 
@@ -335,3 +436,4 @@ Berikut saran yang bisa diberikan:
 
 - Pada tahapan mengubah tipe data kolom, bisa dievaluasi setiap kolomnya atau kolom tertentu (tergantung kebutuhan bisnisnya). Sehinggga fokus eksplorasi data sudah ditentukan sejak awal yaitu sebelum masuk ke pra-pemrosesan data. 
 - Di investigasi akhir _coercion_, dinyatakan bahwa "seluruh isiannya merupakan angka". Hal tersebut bisa keliru jika terdapat isian yang merupakan angka tapi tidak _valid_. Semisal, nilai "1.23121312.3" akan dideteksi `TRUE` karena memiliki komponen `:digit:`, meski jika dilakukan `as.numeric()` akan muncul peringatan dan menghasilkan nilai `NA`. Hal tersebut dikarenakan penggunaan `str_detect()` dengan `pattern = "[:digit:]"`. 
+- Konsistensi penamaan dengan `class` objek. Dalam lembar kerja, objek `missing_val` merupakan `list`, sedangkan `missing_val_actual` merupakan `data.frame`. Untuk konsistensi dan memudahkan _troubleshooting_, sebaiknya dilakukan penamaan dan konsistensi tipe objeknya. 
