@@ -326,11 +326,11 @@ exchange_r1_numeric |> str()
 
 Proses berikutnya adalah mengevaluasi data yang hilang (`NA`). 
 
-### Data yang hilang
+## Data yang hilang
 
 Sebelum mengisi data yang hilang, sebaiknya di eksplorasi terlebih dahulu mengenai informasi hilangnya data. Dataset yang digunakan adalah objek `exchange_r1_numeric` yang telah mengubah seluruh tipe kolom menjadi numerik. 
 
-#### Eksplorasi data yang hilang 
+### Eksplorasi data yang hilang 
 
 ```{r}
 missing_val <- exchange_r1_numeric |> is.na() |> colSums()
@@ -388,8 +388,9 @@ exchange_r1_selected |> glimpse()
 
 Dari dataset tersebut bisa dilanjutkan ke pengisian data yang hilang. 
 
-#### Pengisian data yang hilang
+### Pengisian data yang hilang
 
+Dataset `exchange_r1_selected` diperiksa nilai data yang hilang. Dari narasi diatas diketahui, hari Sabtu dan Minggu, memang tidak tersedia datanya. Sehingga, observasi tersebut harus diisi jika menginginkan dataset yang kontinyu dengan interval waktu dalam bentuk harian. Berikut baris yang hilang dan disimpan dalam bentuk  
 
 ```{r}
 exchange_r1_missing <- exchange_r1_selected |> 
