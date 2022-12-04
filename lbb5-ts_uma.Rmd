@@ -28,7 +28,9 @@ library(fpp)
 library(xts)
 library(lubridate)
 library(padr)
+library(MLmetrics)
 options(scipen=999)
+knitr::opts_chunk$set(fig.align = "center")
 ```
 
 ```{r}
@@ -390,7 +392,7 @@ Dari dataset tersebut bisa dilanjutkan ke pengisian data yang hilang.
 
 ### Pengisian data yang hilang
 
-Dataset `exchange_r1_selected` diperiksa nilai data yang hilang. Dari narasi diatas diketahui, hari Sabtu dan Minggu, memang tidak tersedia datanya. Sehingga, observasi tersebut harus diisi jika menginginkan dataset yang kontinyu dengan interval waktu dalam bentuk harian. Berikut baris yang hilang dan disimpan dalam bentuk  
+Dataset `exchange_r1_selected` diperiksa nilai data yang hilangnya. Dari narasi diatas diketahui, hari Sabtu dan Minggu, memang tidak tersedia datanya. Sehingga, observasi tersebut harus diisi jika menginginkan dataset yang kontinyu dengan interval waktu dalam bentuk harian. Berikut baris yang hilang dan disimpan dalam bentuk `data.frame`. Dan berikut jumlah hari yang hilang setiap _weekday_. 
 
 ```{r}
 exchange_r1_missing <- exchange_r1_selected |> 
@@ -399,37 +401,211 @@ exchange_r1_missing <- exchange_r1_selected |>
   mutate(
     period.unit = ymd(period.unit)
   )
-exchange_r1_missing
+date_missing <- exchange_r1_missing$period.unit
+date_missing |> wday(label = TRUE, abbr = FALSE) |> table()
 ```
 
+Data yang hilang akan diisi dengan metode `na.fill()` dengan menggunakan `fill = "extend"`. Data yang telah diisi disimpan pada objek `exchange_r1_fill`. Hal ini dipilih dikarenakan nilai mata uang bersifat kontinyu dari sebelum dan sesudahnya. Sehingga pengisian nilai harus diisi berdasarkan nilai terdekatnya. 
 
+```{r, class.output="scroll-100"}
+exchange_r1_fill <- exchange_r1_selected |> 
+  mutate_all(na.fill, fill = "extend")
+exchange_r1_fill |> glimpse()
+```
 
+Dilakukan pengecekan ulang dengan `anyNA()`.
 
+```{r}
+anyNA(exchange_r1_fill)
+```
 
+Menghasilkan `FALSE` yang artinya data sudah lengkap (tidak terdapat data yang kosong/hilang). Setelah ini dataset `exchange_r1_fill`, bisa dilanjutkan ke tahap **R2 - Eksplorasi Data**. 
+
+---
 
 # R2 - Eksplorasi Data
 
-```{r, eval=FALSE}
-exchange_r1_selected |> 
-  # boxplot()
-  mutate_if(is.numeric, function(.) {
-    minvec <- min(., na.rm = TRUE)
-    maxvec <- max(., na.rm = TRUE)
-    normalize <- (. - minvec) / (maxvec - minvec)
-  }) |> 
-  rownames_to_column("period.unit") |>
-  mutate(period.unit = ymd(period.unit)) |>
-  pivot_longer(cols = all_of(selected_country), names_to = "currency", values_to = "rate") |>
-  arrange(currency) |>
+Setelah memastikan dataset sudah lengkap dan memenuhi kriteria kelengkapan data, dilanjutkan dengan mengeksplorasi dataset ini. Eksplorasi ini bisa berupa statistik deskriptif ataupun analisis terkait jenis data deret waktu (_time series_). Pada tahap ini dataset disimpan sebagai objek baru bernama `exchange_r2` yang merupakan objek `exchange_r1_fill`. Kolom `period.unit` dimunculkan kembali dari nama baris dan diubah sebagai jenis data waktu.  
+
+```{r}
+exchange_r2 <- exchange_r1_fill |> 
+  rownames_to_column("period.unit") |> 
+  mutate(period.unit = ymd(period.unit))
+exchange_r2 |> head()
+```
+
+Langkah yang akan dilakukan dalam mengeksplorasi dataset dimulai dari deskripsi umum mengenai dataset, statistik dataset, kemudian diakhiri dengan eksplorasi sebagai data deret waktu. 
+
+## Deskripsi dataset
+
+Dataset yang digunakan adalah `exchange_r2`. Deskrpsi yang dimaksud adalah eksplorasi dini terkait jumlah observasi/baris, jumlah variabel/kolom, dan periode datasetnya. Berikut kilasan `exchange_r2`. 
+
+```{r, class.output="scroll-100"}
+exchange_r2 |> glimpse()
+```
+
+```{r}
+exchange_r2$period.unit |> summary() |> strftime("%d %B %Y")
+```
+
+```{r}
+exchange_r2 |> dim()
+```
+
+Dari informasi diatas diketahui bahwa `exchange_r2` memiliki $8,717$ baris dan $25$ kolom ($24$ mata uang dengan $1$ kolom waktu) yang dimulai dari $\text{4 Januari 1999}$ sampai $\text{15 November 2022}$. Pada tahap ini diambil keputusan untuk mengambil tiga mata uang saja untuk eksplorasi berikutnya sampai akhir. Mata uang yang digunakan antara lain `indonesian.rupiah`, `us.dollar`, `japanese.yen`. Kolom yang terpilih disimpan dalam objek `exchange_r2_selected`. 
+
+```{r}
+exchange_r2_selected <- exchange_r2 |> 
+  select(period.unit, indonesian.rupiah, us.dollar, japanese.yen)
+exchange_r2_selected |> glimpse()
+```
+
+Mata uang yang terpilih disimpan dalam variabel `r2_selected`.
+
+```{r}
+r2_selected <- exchange_r2_selected |> 
+  select(-period.unit) |> 
+  colnames()
+```
+
+
+## Statistik Deskriptif
+
+Untuk tahap ini dan seterusnya akan menggunakan dataset `exchange_r2_selected`. Berikut `summary()` dari dataset.
+
+```{r}
+exchange_r2_selected |> 
+  select(-period.unit) |> 
+  summary()
+```
+
+Dari informasi diatas diketahui nilai minimum, kuartil pertama/ketiga, median, rata-rata, dan maksimum. Nilai tiap kolom terlihat memiliki rentang (_range_) yang berbeda-beda. Sehingga jika dicoba untuk di plot distribusinya menggunakan `boxplot` akan berbeda.
+
+```{r, fig.align='center', fig.cap='Boxplot Nilai Tukar'}
+exchange_r2_selected |>
+  select(-period.unit) |> 
+  boxplot()
+```
+
+Salah satu cara untuk melihat perbandingan antar kolom dengan dilakukan normalisasi. Normalisasi yang digunakan adalah menggunakan minimum dan maksimumnya (minmax scale). Berikut boxplot yang serupa setelah normalisasi. 
+
+```{r, fig.cap='Boxplot Nilai Tukar (normalisasi)'}
+exchange_r2_minmax <- exchange_r2_selected |> 
+  mutate_if(
+    is.numeric,
+    function(.) {
+      minvec <- min(.)
+      maxvec <- max(.)
+      normalize <- (. - minvec) / (maxvec - minvec)
+    }
+  )
+exchange_r2_minmax |> 
+  select(-period.unit) |> 
+  boxplot()
+
+```
+
+Dari _boxplot_ diatas, semua mata uang bisa dilihat distribusinya secara sekaligus. Mata uang `japanese.yen` memiliki beberapa potensi _outlier_. Sedangkan untuk `indonesia.rupiah` dan `us.dollar` tidak memilikinya. Hal tersebut bisa diinterpretasikan, bahwa pada `indonesian.rupiah` maupun `us.dollar` tidak ada lonjakan tajam yang diluar dari rata-rata maupun kuartilnya. Sedangkan untuk `japanese.yen` diduga terdapat posisi dimana mata uangnya yang berbeda dari seluruh observasi data lainnya. 
+
+```{r, fig.height=3, fig.width=10, fig.align='center', fig.cap='Perubahan Nilai Tukar Harian (Normalisasi)'}
+exchange_r2_minmax |> 
+  pivot_longer(cols = -period.unit, names_to = "currency", values_to = "rate") |> 
+  arrange(currency) |> 
   ggplot(aes(x = period.unit, y = rate, color = currency)) +
   geom_line()
+
 ```
+
+## Eksplorasi _Time Series_
+
+Untuk eksplorasi data deret waktu, yang digunakan hanyalah mata uang `indonesian.rupiah`. 
+
+```{r}
+exchange_r2_rupiah <- exchange_r2_selected |> 
+  select(period.unit, indonesian.rupiah)
+exchange_r2_rupiah |> glimpse()
+```
+
+Untuk eksplorasi berdasarkan jenis datanya, dibuat objek `ts_rupiah` yang mengubah objek `exchange_r2_rupiah` menjadi _time series_ menggunakan `ts()`. 
+
+```{r}
+ts_rupiah <- ts(exchange_r2_rupiah$indonesian.rupiah, start = c(1999, 1), frequency = 365)
+```
+
+Selanjutnya dilakukan _decomposition_ untuk melihat karakteristik dataset `ts_rupiah`. 
+
+### Dekomposisi
+
+Dekomposisi dilakukan menggunakan fungsi `decompose()` yang membagi dataset menjadi tiga bagian utama yaitu _trend_, _seasonal_, dan _error_ / _remainder_. Berikut objek dekomposisi `decompose_rupiah` beserta struktur datanya. 
+
+```{r}
+decompose_rupiah <- ts_rupiah |> decompose()
+decompose_rupiah |> str()
+```
+
+Didapatkan tiga komponen dekomposisi yaitu `seasonal`, `trend`, dan `random`. Dan secara _default_ dataset termasuk _additive time series_. Berikut grafik dekomposisi menggunakan `autoplot()`.  
+
+```{r, fig.height=6, fig.cap="Dekomposisi Nilai Tukar Rupiah"}
+decompose_rupiah |> autoplot()
+```
+
+Dari grafik dekomposisi diatas, terlihat bahwa hasil `decompose()` mengeluarkan tiga komponen utamanya. Akan tetapi, hasil diatas belum tentu sesuai dengan kenyataannya. Dan harus dieksplorasi lebih lanjut. 
 
 # R3 - Pemodelan
 
+Untuk pemodelan digunakan Holt Winters dan ARIMA. dataset yang digunakan adalah `ts_rupiah`. Tapi sebelumnya dataset harus dibagi menjadi dua bagian yaitu train set dan testing set.
+
+```{r}
+window_selected <- 365
+train_ts <- ts_rupiah |> head(-window_selected)
+test_ts <- ts_rupiah |> tail(window_selected)
+```
+
+Pemodelan Holt Winters dan ARIMA menggunakan `holtwinter` dan `stlm`. 
+
+```{r}
+hw_rupiah <- HoltWinters(train_ts)
+arima_rupiah <- stlm(train_ts, s.window = 365, method = "arima")
+```
+
 # R4 - Evaluasi
 
-# Kesimpulan
+Evaluasi 
+
+```{r}
+hw_forecast <- forecast(hw_rupiah, window_selected)
+arima_forecast <- forecast(arima_rupiah, window_selected)
+```
+
+```{r}
+accuracy(hw_forecast, test_ts)
+```
+
+```{r}
+accuracy(arima_forecast, test_ts)
+```
+
+```{r, fig.height=4, fig.width=10, fig.cap="Training dan Prediksi menggunakan Holt-Winters"}
+train_ts |> 
+  autoplot() +
+  autolayer(hw_rupiah$fitted[,'xhat'], series = "training") +
+  autolayer(hw_forecast, series = "forecast") +
+  autolayer(test_ts, series = "actual")
+```
+
+```{r, fig.height=4, fig.width=10, fig.cap="Training dan Prediksi menggunakan Holt-Winters"}
+train_ts |> 
+  autoplot() +
+  autolayer(arima_rupiah$fitted, series = "training") +
+  autolayer(hw_forecast, series = "forecast") +
+  autolayer(test_ts, series = "actual")
+```
+
+# Penutup
+
+## Kesimpulan
+
+-
 
 ## Saran
 
